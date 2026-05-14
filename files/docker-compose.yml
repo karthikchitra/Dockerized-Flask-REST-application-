@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  flask-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner          # use the production stage
+    image: flask-docker-app:latest
+    container_name: flask_api
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ── Optional: run tests inside a throwaway container ──
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder         # has dev dependencies
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+             pytest tests/ -v --cov=app --cov-report=term-missing"
+    profiles:
+      - test                  # only starts with: docker compose --profile test up
